@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import { DarkModeToggle } from "@/components/DarkModeToggle";
 
 const queryClient = new QueryClient();
 
@@ -20,6 +21,9 @@ const App = () => (
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
+      <div className="fixed bottom-4 right-4 z-50 md:bottom-8 md:right-8">
+        <DarkModeToggle />
+      </div>
     </TooltipProvider>
   </QueryClientProvider>
 );

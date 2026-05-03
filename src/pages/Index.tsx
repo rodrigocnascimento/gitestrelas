@@ -9,6 +9,8 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { toast } from "sonner";
+import { DarkModeToggle } from "@/components/DarkModeToggle";
+import { Moon, Sun } from "lucide-react";
 
 interface RepoData {
   id: number;
@@ -36,17 +38,17 @@ const Index = () => {
   const loadStars = useCallback(async (user: string) => {
     setLoading(true);
     setRepos([]);
-    try {
-      const all: RepoData[] = [];
-      for (let page = 1; page <= 4; page++) {
-        const res = await fetch(
-          `https://api.github.com/users/${user}/starred?per_page=100&page=${page}`
-        );
-        if (!res.ok) {
-          throw new Error(
-            res.status === 404 ? `User "${user}" not found` : `GitHub API ${res.status}`
+      try {
+        const all: RepoData[] = [];
+        for (let page = 1; page <= 4; page++) {
+          const res = await fetch(
+            `https://api.github.com/users/${user}/starred?per_page=100&page=${page}`
           );
-        }
+          if (!res.ok) {
+            throw new Error(
+              res.status === 404 ? `User "${user}" not found` : `GitHub API ${res.status}`
+            );
+          }
         const data = (await res.json()) as RepoData[];
         all.push(...data);
         if (data.length < 100) break;
@@ -118,21 +120,24 @@ const Index = () => {
   });
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border">
+    <>
+      <header className="border-b border-border sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex items-center justify-between py-4">
           <div className="flex items-center gap-2">
             <Github className="h-6 w-6" />
             <span className="font-semibold">GitHub Stars</span>
           </div>
-          <a
-            href={`https://github.com/${username}`}
-            target="_blank"
-            rel="noreferrer"
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            @{username}
-          </a>
+          <div className="flex items-center gap-2">
+            <DarkModeToggle />
+            <a
+              href={`https://github.com/${username}`}
+              target="_blank"
+              rel="noreferrer"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              @{username}
+            </a>
+          </div>
         </div>
       </header>
 
@@ -307,7 +312,7 @@ const Index = () => {
           </div>
         )}
       </main>
-    </div>
+    </>
   );
 };
 
