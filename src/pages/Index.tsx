@@ -78,14 +78,43 @@ const Index = () => {
   const formatNum = (n: number) =>
     n >= 1000 ? `${(n / 1000).toFixed(1)}k` : n.toString();
 
+  const [selectedLanguages, setSelectedLanguages] = useState<Set<string>>(new Set());
+  const [languageOpen, setLanguageOpen] = useState(false);
+
+  const languageCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const r of repos) {
+      const lang = r.language || "Unknown";
+      map.set(lang, (map.get(lang) || 0) + 1);
+    }
+    return Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
+  }, [repos]);
+
+  // Reset language selection when repos change (e.g., switching users)
+  useEffect(() => {
+    setSelectedLanguages(new Set());
+  }, [repos]);
+
+  const toggleLanguage = (lang: string) => {
+    setSelectedLanguages((prev) => {
+      const next = new Set(prev);
+      if (next.has(lang)) next.delete(lang);
+      else next.add(lang);
+      return next;
+    });
+  };
+
   const filtered = repos.filter((r) => {
     const q = query.toLowerCase();
-    return (
+    const matchesQuery =
       !q ||
       r.full_name.toLowerCase().includes(q) ||
       r.description?.toLowerCase().includes(q) ||
-      r.language?.toLowerCase().includes(q)
-    );
+      r.language?.toLowerCase().includes(q);
+    const matchesLang =
+      selectedLanguages.size === 0 ||
+      selectedLanguages.has(r.language || "Unknown");
+    return matchesQuery && matchesLang;
   });
 
   return (
