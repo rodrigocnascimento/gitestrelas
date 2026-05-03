@@ -168,7 +168,7 @@ const Index = () => {
           </Button>
         </form>
 
-        <div className="relative mb-6">
+        <div className="relative mb-3">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Filter by name, description, or language"
@@ -178,6 +178,68 @@ const Index = () => {
             disabled={loading}
           />
         </div>
+
+        {languageCounts.length > 0 && (
+          <Collapsible open={languageOpen} onOpenChange={setLanguageOpen} className="mb-6">
+            <div className="flex items-center gap-2 flex-wrap">
+              <CollapsibleTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Code2 className="h-4 w-4" />
+                  Languages
+                  {selectedLanguages.size > 0 && (
+                    <span className="text-xs px-1.5 py-0.5 rounded-full bg-primary text-primary-foreground">
+                      {selectedLanguages.size}
+                    </span>
+                  )}
+                  <ChevronDown
+                    className={`h-4 w-4 transition-transform ${languageOpen ? "rotate-180" : ""}`}
+                  />
+                </Button>
+              </CollapsibleTrigger>
+              {selectedLanguages.size > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedLanguages(new Set())}
+                  className="gap-1 text-muted-foreground"
+                >
+                  <X className="h-3 w-3" />
+                  Clear
+                </Button>
+              )}
+              <span className="text-sm text-muted-foreground ml-auto">
+                {filtered.length} of {repos.length}
+              </span>
+            </div>
+            <CollapsibleContent className="mt-3">
+              <Card className="p-4">
+                <div className="flex flex-wrap gap-2">
+                  {languageCounts.map(([lang, count]) => {
+                    const active = selectedLanguages.has(lang);
+                    return (
+                      <button
+                        key={lang}
+                        type="button"
+                        onClick={() => toggleLanguage(lang)}
+                        className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                          active
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-background border-border hover:bg-accent"
+                        }`}
+                      >
+                        {lang}
+                        <span className={`ml-1.5 ${active ? "opacity-80" : "text-muted-foreground"}`}>
+                          {count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </Card>
+            </CollapsibleContent>
+          </Collapsible>
+        )}
+
 
         {loading ? (
           <div className="flex items-center justify-center py-20 text-muted-foreground">
