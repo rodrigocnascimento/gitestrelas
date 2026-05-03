@@ -1,8 +1,13 @@
-import { useEffect, useState, useCallback } from "react";
-import { Star, Github, GitFork, ExternalLink, Loader2, Search, User } from "lucide-react";
+import { useEffect, useMemo, useState, useCallback } from "react";
+import { Star, Github, GitFork, ExternalLink, Loader2, Search, User, ChevronDown, Code2, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { toast } from "sonner";
 
 interface RepoData {
