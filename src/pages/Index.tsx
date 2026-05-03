@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
-import { Star, Github, GitFork, ExternalLink, Loader2, Search } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
+import { Star, Github, GitFork, ExternalLink, Loader2, Search, User } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 
@@ -15,35 +16,59 @@ interface RepoData {
   owner: { avatar_url: string; login: string };
 }
 
-const USERNAME = "rodrigocnascimento";
+const DEFAULT_USERNAME = "rodrigocnascimento";
+const STORAGE_KEY = "github-stars-username";
 
 const Index = () => {
+  const [username, setUsername] = useState<string>(
+    () => localStorage.getItem(STORAGE_KEY) || DEFAULT_USERNAME
+  );
+  const [usernameInput, setUsernameInput] = useState(username);
   const [repos, setRepos] = useState<RepoData[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const all: RepoData[] = [];
-        for (let page = 1; page <= 4; page++) {
-          const res = await fetch(
-            `https://api.github.com/users/${USERNAME}/starred?per_page=100&page=${page}`
+  const loadStars = useCallback(async (user: string) => {
+    setLoading(true);
+    setRepos([]);
+    try {
+      const all: RepoData[] = [];
+      for (let page = 1; page <= 4; page++) {
+        const res = await fetch(
+          `https://api.github.com/users/${user}/starred?per_page=100&page=${page}`
+        );
+        if (!res.ok) {
+          throw new Error(
+            res.status === 404 ? `User "${user}" not found` : `GitHub API ${res.status}`
           );
-          if (!res.ok) throw new Error(`GitHub API ${res.status}`);
-          const data = (await res.json()) as RepoData[];
-          all.push(...data);
-          if (data.length < 100) break;
         }
-        setRepos(all);
-      } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Failed to load stars");
-      } finally {
-        setLoading(false);
+        const data = (await res.json()) as RepoData[];
+        all.push(...data);
+        if (data.length < 100) break;
       }
-    };
-    load();
+      setRepos(all);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to load stars");
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadStars(username);
+  }, [username, loadStars]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const clean = usernameInput.trim().replace(/^@/, "");
+    if (!clean) return;
+    if (!/^[a-zA-Z0-9-]{1,39}$/.test(clean)) {
+      toast.error("Invalid GitHub username");
+      return;
+    }
+    localStorage.setItem(STORAGE_KEY, clean);
+    setUsername(clean);
+  };
 
   const formatNum = (n: number) =>
     n >= 1000 ? `${(n / 1000).toFixed(1)}k` : n.toString();
@@ -64,15 +89,15 @@ const Index = () => {
         <div className="container flex items-center justify-between py-4">
           <div className="flex items-center gap-2">
             <Github className="h-6 w-6" />
-            <span className="font-semibold">My GitHub Stars</span>
+            <span className="font-semibold">GitHub Stars</span>
           </div>
           <a
-            href={`https://github.com/${USERNAME}`}
+            href={`https://github.com/${username}`}
             target="_blank"
             rel="noreferrer"
             className="text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
-            @{USERNAME}
+            @{username}
           </a>
         </div>
       </header>
@@ -84,10 +109,30 @@ const Index = () => {
           </h1>
           <p className="text-muted-foreground text-lg">
             {loading
-              ? "Loading your stars…"
-              : `${repos.length} repositories starred by @${USERNAME}`}
+              ? `Loading stars for @${username}…`
+              : `${repos.length} repositories starred by @${username}`}
           </p>
         </section>
+
+        <form onSubmit={handleSubmit} className="flex gap-2 mb-4">
+          <div className="relative flex-1">
+            <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="GitHub username"
+              value={usernameInput}
+              onChange={(e) => setUsernameInput(e.target.value)}
+              className="h-12 pl-10"
+              disabled={loading}
+            />
+          </div>
+          <Button
+            type="submit"
+            size="lg"
+            disabled={loading || !usernameInput.trim() || usernameInput.trim() === username}
+          >
+            Load
+          </Button>
+        </form>
 
         <div className="relative mb-6">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -153,9 +198,14 @@ const Index = () => {
                 </div>
               </Card>
             ))}
-            {filtered.length === 0 && (
+            {filtered.length === 0 && repos.length > 0 && (
               <Card className="p-12 text-center text-muted-foreground border-dashed md:col-span-2">
                 No repositories match your filter.
+              </Card>
+            )}
+            {repos.length === 0 && (
+              <Card className="p-12 text-center text-muted-foreground border-dashed md:col-span-2">
+                No starred repositories found.
               </Card>
             )}
           </div>
