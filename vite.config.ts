@@ -2,17 +2,23 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
+import { sentryVitePlugin } from "@sentry/vite-plugin";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  server: {
-    host: "::",
-    port: 8080,
-    hmr: {
-      overlay: false,
-    },
-  },
-  plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
+    server: {
+     host: "::",
+     port: 8080,
+     allowedHosts: ["*.ngrok-free.app", "e39e-168-0-103-218.ngrok-free.app"],
+     hmr: {
+       overlay: false,
+     },
+   },
+  plugins: [react(), mode === "development" && componentTagger(), sentryVitePlugin({
+    org: "gitestrelas",
+    project: "vite-react-shadcn-ts",
+    authToken: process.env.SENTRY_AUTH_TOKEN,
+  })].filter(Boolean),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
