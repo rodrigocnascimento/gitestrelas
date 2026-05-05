@@ -326,7 +326,7 @@ const Index = () => {
           </div>
         ) : (
           <div className="grid gap-3 md:grid-cols-2">
-            {filtered.map((repo) => (
+            {paged.map((repo) => (
               <Card
                 key={repo.id}
                 className="p-5 hover:shadow-md hover:border-foreground/20 transition-all"
