@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
-import { Star, Github, GitFork, ExternalLink, Loader2, Search, User, ChevronDown, Code2, X } from "lucide-react";
+import { Star, Github, GitFork, ExternalLink, Loader2, Search, User, ChevronDown, Code2, X, ArrowDownWideNarrow, ArrowDownAZ } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -82,6 +82,7 @@ const Index = () => {
 
   const [selectedLanguages, setSelectedLanguages] = useState<Set<string>>(new Set());
   const [languageOpen, setLanguageOpen] = useState(false);
+  const [langSort, setLangSort] = useState<"count" | "alpha">("count");
 
   const languageCounts = useMemo(() => {
     const map = new Map<string, number>();
@@ -89,8 +90,11 @@ const Index = () => {
       const lang = r.language || "Unknown";
       map.set(lang, (map.get(lang) || 0) + 1);
     }
-    return Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
-  }, [repos]);
+    const entries = Array.from(map.entries());
+    return langSort === "count"
+      ? entries.sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      : entries.sort((a, b) => a[0].localeCompare(b[0]));
+  }, [repos, langSort]);
 
   // Reset language selection when repos change (e.g., switching users)
   useEffect(() => {
