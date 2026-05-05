@@ -222,6 +222,35 @@ const Index = () => {
             </div>
             <CollapsibleContent className="mt-3">
               <Card className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs text-muted-foreground">Sort by</span>
+                  <div className="inline-flex rounded-md border border-border overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setLangSort("count")}
+                      className={`text-xs px-2.5 py-1 inline-flex items-center gap-1 transition-colors ${
+                        langSort === "count"
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-background hover:bg-accent"
+                      }`}
+                    >
+                      <ArrowDownWideNarrow className="h-3 w-3" />
+                      Most used
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLangSort("alpha")}
+                      className={`text-xs px-2.5 py-1 inline-flex items-center gap-1 transition-colors ${
+                        langSort === "alpha"
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-background hover:bg-accent"
+                      }`}
+                    >
+                      <ArrowDownAZ className="h-3 w-3" />
+                      A–Z
+                    </button>
+                  </div>
+                </div>
                 <div className="flex flex-wrap gap-2">
                   {languageCounts.map(([lang, count]) => {
                     const active = selectedLanguages.has(lang);
