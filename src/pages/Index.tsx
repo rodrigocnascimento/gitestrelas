@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
-import { Star, Github, GitFork, ExternalLink, Loader2, Search, User, ChevronDown, Code2, X } from "lucide-react";
+import { Star, Github, GitFork, ExternalLink, Loader2, Search, User, ChevronDown, Code2, X, ArrowDownWideNarrow, ArrowDownAZ } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -82,6 +82,7 @@ const Index = () => {
 
   const [selectedLanguages, setSelectedLanguages] = useState<Set<string>>(new Set());
   const [languageOpen, setLanguageOpen] = useState(false);
+  const [langSort, setLangSort] = useState<"count" | "alpha">("count");
 
   const languageCounts = useMemo(() => {
     const map = new Map<string, number>();
@@ -89,8 +90,11 @@ const Index = () => {
       const lang = r.language || "Unknown";
       map.set(lang, (map.get(lang) || 0) + 1);
     }
-    return Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
-  }, [repos]);
+    const entries = Array.from(map.entries());
+    return langSort === "count"
+      ? entries.sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      : entries.sort((a, b) => a[0].localeCompare(b[0]));
+  }, [repos, langSort]);
 
   // Reset language selection when repos change (e.g., switching users)
   useEffect(() => {
@@ -218,6 +222,35 @@ const Index = () => {
             </div>
             <CollapsibleContent className="mt-3">
               <Card className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs text-muted-foreground">Sort by</span>
+                  <div className="inline-flex rounded-md border border-border overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setLangSort("count")}
+                      className={`text-xs px-2.5 py-1 inline-flex items-center gap-1 transition-colors ${
+                        langSort === "count"
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-background hover:bg-accent"
+                      }`}
+                    >
+                      <ArrowDownWideNarrow className="h-3 w-3" />
+                      Most used
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLangSort("alpha")}
+                      className={`text-xs px-2.5 py-1 inline-flex items-center gap-1 transition-colors ${
+                        langSort === "alpha"
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-background hover:bg-accent"
+                      }`}
+                    >
+                      <ArrowDownAZ className="h-3 w-3" />
+                      A–Z
+                    </button>
+                  </div>
+                </div>
                 <div className="flex flex-wrap gap-2">
                   {languageCounts.map(([lang, count]) => {
                     const active = selectedLanguages.has(lang);
