@@ -132,6 +132,37 @@ const Index = () => {
     return matchesQuery && matchesLang;
   });
 
+  const PAGE_SIZE = 20;
+  const [page, setPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+
+  useEffect(() => {
+    setPage(1);
+  }, [query, selectedLanguages, repos]);
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
+
+  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const pageNumbers = useMemo(() => {
+    const pages: (number | "ellipsis")[] = [];
+    const add = (n: number) => pages.push(n);
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) add(i);
+    } else {
+      add(1);
+      if (page > 3) pages.push("ellipsis");
+      const start = Math.max(2, page - 1);
+      const end = Math.min(totalPages - 1, page + 1);
+      for (let i = start; i <= end; i++) add(i);
+      if (page < totalPages - 2) pages.push("ellipsis");
+      add(totalPages);
+    }
+    return pages;
+  }, [page, totalPages]);
+
   return (
     <>
       <header className="border-b border-border sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
