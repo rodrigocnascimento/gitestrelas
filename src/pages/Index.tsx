@@ -34,6 +34,36 @@ interface RepoData {
 
 const DEFAULT_USERNAME = "rodrigocnascimento";
 const STORAGE_KEY = "github-stars-username";
+const CACHE_KEY = "github-stars-cache";
+
+interface CacheEntry {
+  user: string;
+  repos: RepoData[];
+  at: number;
+}
+
+function readCache(user: string): RepoData[] | null {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as CacheEntry;
+    if (parsed.user !== user) return null;
+    return parsed.repos;
+  } catch {
+    return null;
+  }
+}
+
+function writeCache(user: string, repos: RepoData[]) {
+  if (!repos.length) return;
+  try {
+    const entry: CacheEntry = { user, repos, at: Date.now() };
+    localStorage.setItem(CACHE_KEY, JSON.stringify(entry));
+  } catch {
+    // ignore storage errors
+  }
+}
+
 
 const Index = () => {
   const [username, setUsername] = useState<string>(
@@ -45,22 +75,31 @@ const Index = () => {
   const [query, setQuery] = useState("");
 
   const loadStars = useCallback(async (user: string) => {
+    const cached = readCache(user);
+    if (cached && cached.length > 0) {
+      setRepos(cached);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
-    setRepos([]);
-      try {
-        const all: RepoData[] = [];
-        for (let page = 1; page <= 4; page++) {
-          const res = await fetch(
-            `https://api.github.com/users/${user}/starred?per_page=100&page=${page}`
+    try {
+      const all: RepoData[] = [];
+      for (let page = 1; page <= 4; page++) {
+        const res = await fetch(
+          `https://api.github.com/users/${user}/starred?per_page=100&page=${page}`
+        );
+        if (!res.ok) {
+          throw new Error(
+            res.status === 404 ? `User "${user}" not found` : `GitHub API ${res.status}`
           );
-          if (!res.ok) {
-            throw new Error(
-              res.status === 404 ? `User "${user}" not found` : `GitHub API ${res.status}`
-            );
-          }
+        }
         const data = (await res.json()) as RepoData[];
         all.push(...data);
         if (data.length < 100) break;
+      }
+      if (all.length > 0) {
+        writeCache(user, all);
       }
       setRepos(all);
     } catch (e) {
