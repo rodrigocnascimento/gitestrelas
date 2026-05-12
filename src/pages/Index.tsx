@@ -37,28 +37,39 @@ const STORAGE_KEY = "github-stars-username";
 const CACHE_KEY = "github-stars-cache";
 
 interface CacheEntry {
-  user: string;
   repos: RepoData[];
   at: number;
 }
 
-function readCache(user: string): RepoData[] | null {
+type CacheMap = Record<string, CacheEntry>;
+
+function readCacheMap(): CacheMap {
   try {
     const raw = localStorage.getItem(CACHE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as CacheEntry;
-    if (parsed.user !== user) return null;
-    return parsed.repos;
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    // Migrate legacy single-user cache shape { user, repos, at }
+    if (parsed && typeof parsed === "object" && "user" in parsed && "repos" in parsed) {
+      return { [parsed.user as string]: { repos: parsed.repos, at: parsed.at } };
+    }
+    return (parsed as CacheMap) || {};
   } catch {
-    return null;
+    return {};
   }
+}
+
+function readCache(user: string): RepoData[] | null {
+  const map = readCacheMap();
+  const entry = map[user.toLowerCase()];
+  return entry?.repos ?? null;
 }
 
 function writeCache(user: string, repos: RepoData[]) {
   if (!repos.length) return;
   try {
-    const entry: CacheEntry = { user, repos, at: Date.now() };
-    localStorage.setItem(CACHE_KEY, JSON.stringify(entry));
+    const map = readCacheMap();
+    map[user.toLowerCase()] = { repos, at: Date.now() };
+    localStorage.setItem(CACHE_KEY, JSON.stringify(map));
   } catch {
     // ignore storage errors
   }
