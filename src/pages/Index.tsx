@@ -248,11 +248,29 @@ const Index = () => {
           <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-3">
             Starred repositories
           </h1>
-          <p className="text-muted-foreground text-lg">
-            {loading
-              ? `Loading stars for @${username}…`
-              : `${repos.length} repositories starred by @${username}`}
-          </p>
+          <div className="flex items-center gap-3 flex-wrap">
+            <p className="text-muted-foreground text-lg">
+              {loading
+                ? `Loading stars for @${username}…`
+                : `${repos.length} repositories starred by @${username}`}
+            </p>
+            {!loading && cachedAt && (
+              <>
+                <span className="text-xs text-muted-foreground">
+                  · cached {formatAge(Date.now() - cachedAt)} ago
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => loadStars(username, true)}
+                  className="gap-1.5 h-7"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  Refresh
+                </Button>
+              </>
+            )}
+          </div>
         </section>
 
         <form onSubmit={handleSubmit} className="flex gap-2 mb-4">
