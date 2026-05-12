@@ -76,21 +76,29 @@ const Index = () => {
 
   const loadStars = useCallback(async (user: string) => {
     setLoading(true);
-    setRepos([]);
-      try {
-        const all: RepoData[] = [];
-        for (let page = 1; page <= 4; page++) {
-          const res = await fetch(
-            `https://api.github.com/users/${user}/starred?per_page=100&page=${page}`
+
+    const cached = readCache(user);
+    if (cached) {
+      setRepos(cached);
+    }
+
+    try {
+      const all: RepoData[] = [];
+      for (let page = 1; page <= 4; page++) {
+        const res = await fetch(
+          `https://api.github.com/users/${user}/starred?per_page=100&page=${page}`
+        );
+        if (!res.ok) {
+          throw new Error(
+            res.status === 404 ? `User "${user}" not found` : `GitHub API ${res.status}`
           );
-          if (!res.ok) {
-            throw new Error(
-              res.status === 404 ? `User "${user}" not found` : `GitHub API ${res.status}`
-            );
-          }
+        }
         const data = (await res.json()) as RepoData[];
         all.push(...data);
         if (data.length < 100) break;
+      }
+      if (all.length > 0) {
+        writeCache(user, all);
       }
       setRepos(all);
     } catch (e) {
