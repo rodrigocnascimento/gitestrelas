@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
-import { Star, Github, GitFork, ExternalLink, Loader2, Search, User, ChevronDown, Code2, X, ArrowDownWideNarrow, ArrowDownAZ } from "lucide-react";
+import { Star, Github, GitFork, ExternalLink, Loader2, Search, User, ChevronDown, Code2, X, ArrowDownWideNarrow, ArrowDownAZ, RefreshCw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -35,6 +35,17 @@ interface RepoData {
 const DEFAULT_USERNAME = "rodrigocnascimento";
 const STORAGE_KEY = "github-stars-username";
 const CACHE_KEY = "github-stars-cache";
+const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+function formatAge(ms: number): string {
+  const s = Math.floor(ms / 1000);
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h`;
+  return `${Math.floor(h / 24)}d`;
+}
 
 interface CacheEntry {
   repos: RepoData[];
@@ -58,10 +69,9 @@ function readCacheMap(): CacheMap {
   }
 }
 
-function readCache(user: string): RepoData[] | null {
+function readCacheEntry(user: string): CacheEntry | null {
   const map = readCacheMap();
-  const entry = map[user.toLowerCase()];
-  return entry?.repos ?? null;
+  return map[user.toLowerCase()] ?? null;
 }
 
 function writeCache(user: string, repos: RepoData[]) {
@@ -84,13 +94,18 @@ const Index = () => {
   const [repos, setRepos] = useState<RepoData[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
+  const [cachedAt, setCachedAt] = useState<number | null>(null);
 
-  const loadStars = useCallback(async (user: string) => {
-    const cached = readCache(user);
-    if (cached && cached.length > 0) {
-      setRepos(cached);
-      setLoading(false);
-      return;
+  const loadStars = useCallback(async (user: string, force = false) => {
+    if (!force) {
+      const entry = readCacheEntry(user);
+      const fresh = entry && Date.now() - entry.at < CACHE_TTL_MS;
+      if (entry && entry.repos.length > 0 && fresh) {
+        setRepos(entry.repos);
+        setCachedAt(entry.at);
+        setLoading(false);
+        return;
+      }
     }
 
     setLoading(true);
@@ -111,6 +126,9 @@ const Index = () => {
       }
       if (all.length > 0) {
         writeCache(user, all);
+        setCachedAt(Date.now());
+      } else {
+        setCachedAt(null);
       }
       setRepos(all);
     } catch (e) {
@@ -240,11 +258,29 @@ const Index = () => {
           <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-3">
             Starred repositories
           </h1>
-          <p className="text-muted-foreground text-lg">
-            {loading
-              ? `Loading stars for @${username}…`
-              : `${repos.length} repositories starred by @${username}`}
-          </p>
+          <div className="flex items-center gap-3 flex-wrap">
+            <p className="text-muted-foreground text-lg">
+              {loading
+                ? `Loading stars for @${username}…`
+                : `${repos.length} repositories starred by @${username}`}
+            </p>
+            {!loading && cachedAt && (
+              <>
+                <span className="text-xs text-muted-foreground">
+                  · cached {formatAge(Date.now() - cachedAt)} ago
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => loadStars(username, true)}
+                  className="gap-1.5 h-7"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  Refresh
+                </Button>
+              </>
+            )}
+          </div>
         </section>
 
         <form onSubmit={handleSubmit} className="flex gap-2 mb-4">
