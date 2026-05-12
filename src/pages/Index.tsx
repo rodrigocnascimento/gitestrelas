@@ -75,13 +75,14 @@ const Index = () => {
   const [query, setQuery] = useState("");
 
   const loadStars = useCallback(async (user: string) => {
-    setLoading(true);
-
     const cached = readCache(user);
-    if (cached) {
+    if (cached && cached.length > 0) {
       setRepos(cached);
+      setLoading(false);
+      return;
     }
 
+    setLoading(true);
     try {
       const all: RepoData[] = [];
       for (let page = 1; page <= 4; page++) {
