@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
-import { Star, Github, GitFork, ExternalLink, Loader2, Search, User, ChevronDown, Code2, X, ArrowDownWideNarrow, ArrowDownAZ } from "lucide-react";
+import { Star, Github, GitFork, ExternalLink, Loader2, Search, User, ChevronDown, Code2, X, ArrowDownWideNarrow, ArrowDownAZ, RefreshCw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -35,6 +35,7 @@ interface RepoData {
 const DEFAULT_USERNAME = "rodrigocnascimento";
 const STORAGE_KEY = "github-stars-username";
 const CACHE_KEY = "github-stars-cache";
+const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 interface CacheEntry {
   repos: RepoData[];
@@ -58,10 +59,9 @@ function readCacheMap(): CacheMap {
   }
 }
 
-function readCache(user: string): RepoData[] | null {
+function readCacheEntry(user: string): CacheEntry | null {
   const map = readCacheMap();
-  const entry = map[user.toLowerCase()];
-  return entry?.repos ?? null;
+  return map[user.toLowerCase()] ?? null;
 }
 
 function writeCache(user: string, repos: RepoData[]) {
@@ -84,13 +84,18 @@ const Index = () => {
   const [repos, setRepos] = useState<RepoData[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
+  const [cachedAt, setCachedAt] = useState<number | null>(null);
 
-  const loadStars = useCallback(async (user: string) => {
-    const cached = readCache(user);
-    if (cached && cached.length > 0) {
-      setRepos(cached);
-      setLoading(false);
-      return;
+  const loadStars = useCallback(async (user: string, force = false) => {
+    if (!force) {
+      const entry = readCacheEntry(user);
+      const fresh = entry && Date.now() - entry.at < CACHE_TTL_MS;
+      if (entry && entry.repos.length > 0 && fresh) {
+        setRepos(entry.repos);
+        setCachedAt(entry.at);
+        setLoading(false);
+        return;
+      }
     }
 
     setLoading(true);
@@ -111,6 +116,9 @@ const Index = () => {
       }
       if (all.length > 0) {
         writeCache(user, all);
+        setCachedAt(Date.now());
+      } else {
+        setCachedAt(null);
       }
       setRepos(all);
     } catch (e) {
