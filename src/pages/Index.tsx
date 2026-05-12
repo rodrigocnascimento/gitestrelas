@@ -34,6 +34,36 @@ interface RepoData {
 
 const DEFAULT_USERNAME = "rodrigocnascimento";
 const STORAGE_KEY = "github-stars-username";
+const CACHE_KEY = "github-stars-cache";
+
+interface CacheEntry {
+  user: string;
+  repos: RepoData[];
+  at: number;
+}
+
+function readCache(user: string): RepoData[] | null {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as CacheEntry;
+    if (parsed.user !== user) return null;
+    return parsed.repos;
+  } catch {
+    return null;
+  }
+}
+
+function writeCache(user: string, repos: RepoData[]) {
+  if (!repos.length) return;
+  try {
+    const entry: CacheEntry = { user, repos, at: Date.now() };
+    localStorage.setItem(CACHE_KEY, JSON.stringify(entry));
+  } catch {
+    // ignore storage errors
+  }
+}
+
 
 const Index = () => {
   const [username, setUsername] = useState<string>(
