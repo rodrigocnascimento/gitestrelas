@@ -1,0 +1,7 @@
+# Git Connect Hub
+
+> Browse, search and filter your GitHub starred repositories by language.
+
+## Pages
+
+- [/](/): Home — Search any GitHub user's starred repositories, filter by programming language, and paginate through results.
