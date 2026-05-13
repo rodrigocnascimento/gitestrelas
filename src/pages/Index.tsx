@@ -392,7 +392,7 @@ const Index = () => {
                         }`}
                       >
                         {lang}
-                        <span className={`ml-1.5 ${active ? "opacity-80" : "text-muted-foreground"}`}>
+                        <span className={`ml-1.5 ${active ? "text-primary-foreground/80" : "text-muted-foreground"}`}>
                           {count}
                         </span>
                       </button>
@@ -477,11 +477,13 @@ const Index = () => {
               <PaginationItem>
                 <PaginationPrevious
                   href="#"
+                  aria-disabled={page === 1}
+                  tabIndex={page === 1 ? -1 : undefined}
                   onClick={(e) => {
                     e.preventDefault();
                     setPage((p) => Math.max(1, p - 1));
                   }}
-                  className={page === 1 ? "pointer-events-none opacity-50" : ""}
+                  className={page === 1 ? "pointer-events-none text-muted-foreground" : ""}
                 />
               </PaginationItem>
               {pageNumbers.map((p, i) =>
@@ -507,11 +509,13 @@ const Index = () => {
               <PaginationItem>
                 <PaginationNext
                   href="#"
+                  aria-disabled={page === totalPages}
+                  tabIndex={page === totalPages ? -1 : undefined}
                   onClick={(e) => {
                     e.preventDefault();
                     setPage((p) => Math.min(totalPages, p + 1));
                   }}
-                  className={page === totalPages ? "pointer-events-none opacity-50" : ""}
+                  className={page === totalPages ? "pointer-events-none text-muted-foreground" : ""}
                 />
               </PaginationItem>
             </PaginationContent>
