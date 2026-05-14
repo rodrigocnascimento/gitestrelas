@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
-import { Star, Github, GitFork, ExternalLink, Loader2, Search, User, ChevronDown, Code2, X, ArrowDownWideNarrow, ArrowDownAZ, RefreshCw } from "lucide-react";
+import { Star, Github, GitFork, ExternalLink, Loader2, Search, User, ChevronDown, Code2, X, ArrowDownWideNarrow, ArrowDownAZ, RefreshCw, History } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -19,7 +19,6 @@ import {
 } from "@/components/ui/pagination";
 import { toast } from "sonner";
 import { DarkModeToggle } from "@/components/DarkModeToggle";
-import { Moon, Sun } from "lucide-react";
 import posthog from "posthog-js";
 
 interface RepoData {
@@ -37,6 +36,8 @@ const DEFAULT_USERNAME = "rodrigocnascimento";
 const STORAGE_KEY = "github-stars-username";
 const CACHE_KEY = "github-stars-cache";
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+const RECENT_SEARCHES_KEY = "github-recent-searches";
+const MAX_RECENT_SEARCHES = 8;
 
 function formatAge(ms: number): string {
   const s = Math.floor(ms / 1000);
@@ -86,6 +87,40 @@ function writeCache(user: string, repos: RepoData[]) {
   }
 }
 
+function readRecentSearches(): string[] {
+  try {
+    const raw = localStorage.getItem(RECENT_SEARCHES_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed.filter((u): u is string => typeof u === "string");
+    return [];
+  } catch {
+    return [];
+  }
+}
+
+function saveRecentSearch(username: string) {
+  try {
+    const list = readRecentSearches().filter((u) => u.toLowerCase() !== username.toLowerCase());
+    list.unshift(username);
+    if (list.length > MAX_RECENT_SEARCHES) list.length = MAX_RECENT_SEARCHES;
+    localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(list));
+    return list;
+  } catch {
+    return readRecentSearches();
+  }
+}
+
+function removeRecentSearch(username: string): string[] {
+  try {
+    const list = readRecentSearches().filter((u) => u.toLowerCase() !== username.toLowerCase());
+    localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(list));
+    return list;
+  } catch {
+    return readRecentSearches();
+  }
+}
+
 
 const Index = () => {
   const [username, setUsername] = useState<string>(
@@ -96,6 +131,9 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [cachedAt, setCachedAt] = useState<number | null>(null);
+  const [recentSearches, setRecentSearches] = useState<string[]>(() => {
+    return readRecentSearches();
+  });
 
   const loadStars = useCallback(async (user: string, force = false) => {
     if (!force) {
@@ -104,6 +142,7 @@ const Index = () => {
       if (entry && entry.repos.length > 0 && fresh) {
         setRepos(entry.repos);
         setCachedAt(entry.at);
+        setRecentSearches(saveRecentSearch(user));
         setLoading(false);
         return;
       }
@@ -135,7 +174,9 @@ const Index = () => {
         setCachedAt(null);
       }
       setRepos(all);
+      setRecentSearches(saveRecentSearch(user));
       posthog.capture("stars_loaded", { username: user, count: all.length });
+      posthog.capture("recent_search_saved", { username: user });
     } catch (e) {
       posthog.capture("github_api_error", {
         username: user,
@@ -155,14 +196,39 @@ const Index = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const clean = usernameInput.trim().replace(/^@/, "");
-    if (!clean) return;
     if (!/^[a-zA-Z0-9-]{1,39}$/.test(clean)) {
       toast.error("Invalid GitHub username");
       return;
     }
-    localStorage.setItem(STORAGE_KEY, clean);
-    setUsername(clean);
+    if (clean.toLowerCase() === username.toLowerCase()) {
+      loadStars(clean);
+    } else {
+      localStorage.setItem(STORAGE_KEY, clean);
+      setUsername(clean);
+    }
     posthog.capture("username_submitted", { username: clean });
+  };
+
+  const selectRecentSearch = (user: string) => {
+    setUsernameInput(user);
+    localStorage.setItem(STORAGE_KEY, user);
+    setUsername(user);
+    posthog.capture("recent_search_selected", { username: user });
+  };
+
+  const removeRecent = (e: React.MouseEvent, user: string) => {
+    e.stopPropagation();
+    setRecentSearches(removeRecentSearch(user));
+    if (user.toLowerCase() === username.toLowerCase()) {
+      setUsernameInput("");
+    }
+    posthog.capture("recent_search_removed", { username: user });
+  };
+
+  const clearRecentSearches = () => {
+    localStorage.removeItem(RECENT_SEARCHES_KEY);
+    setRecentSearches([]);
+    posthog.capture("recent_searches_cleared");
   };
 
   const formatNum = (n: number) =>
@@ -260,15 +326,25 @@ const Index = () => {
             <Github className="h-6 w-6" />
             <span className="font-semibold">GitHub Stars</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <DarkModeToggle />
             <a
-              href={`https://github.com/${username}`}
+              href="https://x.com/_whiletruedo"
               target="_blank"
               rel="noreferrer"
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1"
             >
-              @{username}
+              <span className="font-semibold">X</span>
+              <span>@_whiletruedo</span>
+            </a>
+            <a
+              href="https://github.com/rodrigocnascimento"
+              target="_blank"
+              rel="noreferrer"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1"
+            >
+              <Github className="h-4 w-4" />
+              <span>@rodrigocnascimento</span>
             </a>
           </div>
         </div>
@@ -318,11 +394,60 @@ const Index = () => {
           <Button
             type="submit"
             size="lg"
-            disabled={loading || !usernameInput.trim() || usernameInput.trim() === username}
+            disabled={loading}
           >
             Load
           </Button>
         </form>
+
+        {recentSearches.length > 0 && (
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <History className="h-3 w-3" />
+                <span>Recent searches</span>
+              </div>
+              <button
+                type="button"
+                onClick={clearRecentSearches}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors underline-offset-2 hover:underline"
+              >
+                Clear all
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {recentSearches.map((user) => {
+                const isActive = user.toLowerCase() === username.toLowerCase();
+                return (
+                  <button
+                    key={user}
+                    type="button"
+                    onClick={() => selectRecentSearch(user)}
+                    className={`
+                      inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border transition-colors
+                      ${isActive
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background border-border hover:bg-accent hover:border-foreground/30"
+                      }
+                    `}
+                  >
+                    <User className="h-3 w-3 shrink-0" />
+                    <span className="max-w-[120px] truncate">{user}</span>
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => removeRecent(e, user)}
+                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") removeRecent(e as unknown as React.MouseEvent, user); }}
+                      className="ml-0.5 rounded-full p-0.5 hover:bg-background/20 transition-colors"
+                    >
+                      <X className="h-3 w-3" />
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         <div className="relative mb-3">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
