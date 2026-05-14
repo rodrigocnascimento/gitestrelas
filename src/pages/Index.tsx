@@ -20,6 +20,7 @@ import {
 import { toast } from "sonner";
 import { DarkModeToggle } from "@/components/DarkModeToggle";
 import { Moon, Sun } from "lucide-react";
+import posthog from "posthog-js";
 
 interface RepoData {
   id: number;
@@ -108,6 +109,9 @@ const Index = () => {
       }
     }
 
+    if (force) {
+      posthog.capture("stars_refreshed", { username: user });
+    }
     setLoading(true);
     try {
       const all: RepoData[] = [];
@@ -131,7 +135,13 @@ const Index = () => {
         setCachedAt(null);
       }
       setRepos(all);
+      posthog.capture("stars_loaded", { username: user, count: all.length });
     } catch (e) {
+      posthog.capture("github_api_error", {
+        username: user,
+        error: e instanceof Error ? e.message : "Unknown error",
+      });
+      posthog.captureException(e);
       toast.error(e instanceof Error ? e.message : "Failed to load stars");
     } finally {
       setLoading(false);
@@ -152,6 +162,7 @@ const Index = () => {
     }
     localStorage.setItem(STORAGE_KEY, clean);
     setUsername(clean);
+    posthog.capture("username_submitted", { username: clean });
   };
 
   const formatNum = (n: number) =>
@@ -181,8 +192,10 @@ const Index = () => {
   const toggleLanguage = (lang: string) => {
     setSelectedLanguages((prev) => {
       const next = new Set(prev);
-      if (next.has(lang)) next.delete(lang);
+      const selected = !next.has(lang);
+      if (!selected) next.delete(lang);
       else next.add(lang);
+      posthog.capture("language_filter_toggled", { language: lang, selected });
       return next;
     });
   };
@@ -211,6 +224,14 @@ const Index = () => {
   useEffect(() => {
     if (page > totalPages) setPage(totalPages);
   }, [page, totalPages]);
+
+  useEffect(() => {
+    if (!query) return;
+    const timeout = setTimeout(() => {
+      posthog.capture("repo_filter_applied", { query_length: query.length });
+    }, 500);
+    return () => clearTimeout(timeout);
+  }, [query]);
 
   const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
@@ -335,7 +356,7 @@ const Index = () => {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setSelectedLanguages(new Set())}
+                  onClick={() => { setSelectedLanguages(new Set()); posthog.capture("language_filters_cleared"); }}
                   className="gap-1 text-muted-foreground"
                 >
                   <X className="h-3 w-3" />
@@ -430,6 +451,7 @@ const Index = () => {
                       target="_blank"
                       rel="noreferrer"
                       className="font-semibold hover:underline flex items-center gap-1.5 truncate"
+                      onClick={() => posthog.capture("repo_link_clicked", { repo: repo.full_name, language: repo.language })}
                     >
                       <span className="truncate">{repo.full_name}</span>
                       <ExternalLink className="h-3 w-3 text-muted-foreground shrink-0" />
